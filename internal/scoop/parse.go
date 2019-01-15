@@ -9,10 +9,10 @@ type message struct {
 	CMD     string
 	PKG     string
 	DEP     []string
-	retChan chan (storeResponse)
+	retChan chan (response)
 }
 
-type storeResponse struct {
+type response struct {
 	code string
 	err  error
 }
@@ -26,5 +26,5 @@ func parse(m []string) (message, error) {
 	pkg := m[1]
 	dep := m[2]
 
-	return message{cmd, pkg, strings.Split(dep, ","), make(chan storeResponse)}, nil
+	return message{cmd, pkg, strings.Split(dep, ","), make(chan response)}, nil
 }

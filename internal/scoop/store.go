@@ -45,22 +45,22 @@ func (s *store) worker() {
 		case QUERY:
 			s.query(m)
 		case NOOP:
-			m.retChan <- storeResponse{OK, nil}
+			m.retChan <- response{OK, nil}
 		default:
 			err := fmt.Errorf("message command %q is invalid", m.CMD)
-			m.retChan <- storeResponse{ERROR, err}
+			m.retChan <- response{ERROR, err}
 		}
 	}
 }
 
 func (s *store) index(msg message) {
-	msg.retChan <- storeResponse{OK, nil}
+	msg.retChan <- response{OK, nil}
 }
 
 func (s *store) remove(msg message) {
-	msg.retChan <- storeResponse{OK, nil}
+	msg.retChan <- response{OK, nil}
 }
 
 func (s *store) query(msg message) {
-	msg.retChan <- storeResponse{OK, nil}
+	msg.retChan <- response{OK, nil}
 }
