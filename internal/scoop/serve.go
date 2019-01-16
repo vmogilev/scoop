@@ -43,11 +43,11 @@ func (c *CMD) serveWrk(r *bufio.Reader, w *bufio.Writer, addr string) error {
 	}
 	input = strings.TrimRight(input, "\n")
 
-	c.Log.Printf("serving %s: %q", addr, input)
+	c.Log.Printf("serving %s:%q", addr, input)
 	output, err := c.store.handle(input)
 	if err != nil {
 		// on error the output = ERROR and we want to propogate it to the client
-		c.Log.Printf("fail %s:%q -> %v", addr, input, err)
+		c.Log.Printf("err %s:%q -> %v", addr, input, err)
 	} else {
 		c.Log.Printf("done %s:%q -> %q", addr, input, output)
 	}
