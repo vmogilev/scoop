@@ -26,5 +26,9 @@ func parse(m []string) (message, error) {
 	pkg := m[1]
 	dep := m[2]
 
-	return message{cmd, pkg, strings.Split(dep, ","), make(chan response)}, nil
+	deps := []string{}
+	if dep != "" {
+		deps = strings.Split(dep, ",")
+	}
+	return message{cmd, pkg, deps, make(chan response)}, nil
 }

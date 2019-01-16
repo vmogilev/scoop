@@ -48,9 +48,17 @@ const (
 func New(port int, timeout time.Duration, dir string, verbose bool) *CMD {
 	log := log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.LUTC|log.Lshortfile)
 
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		log.Fatalf("ERROR: can't create %q: %v", dir, err)
+	t := time.Now().UTC()
+
+	store := &store{
+		PKGS:      make(map[string][]string),
+		DEPS:      make(map[string]map[string]bool),
+		CreatedAt: t,
+		dir:       dir,
+		messages:  make(chan message),
+		log:       log,
 	}
+	store.load()
 
 	c := &CMD{
 		Port:    port,
@@ -59,11 +67,7 @@ func New(port int, timeout time.Duration, dir string, verbose bool) *CMD {
 		done:    make(chan bool),
 		timeout: timeout,
 		verbose: verbose,
-		store: &store{
-			dir:      dir,
-			messages: make(chan message),
-			log:      log,
-		},
+		store:   store,
 	}
 	return c
 }

@@ -74,6 +74,11 @@ func (c *CMD) shutdown() {
 	if err := c.ln.Close(); err != nil {
 		c.Log.Println(err)
 	}
+
+	c.Log.Println("Saving datafile")
+	if err := c.store.unload(); err != nil {
+		c.Log.Println(err)
+	}
 }
 
 func (c *CMD) sendNOOP() error {
