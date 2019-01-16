@@ -137,30 +137,47 @@ func (s *store) datafile() string {
 	return filepath.FromSlash(path)
 }
 
-// load gets called on startup so it's Ok to explode on failure
-// it loads the cached contents of store's datafile into memory
-func (s *store) load() {
+func (s *store) lockfile() string {
+	return s.datafile() + ".lock"
+}
+
+// load gets cached contents of store's datafile into memory
+// and creates a lock to ensure no other instance of it can do so
+func (s *store) load() error {
 	if err := os.MkdirAll(s.dir, 0700); err != nil {
-		log.Fatalf("ERROR: can't create %q: %v", s.dir, err)
+		return fmt.Errorf("can't create %q: %v", s.dir, err)
 	}
 
 	datafile := s.datafile()
+	lockfile := s.lockfile()
+
+	if _, err := os.Stat(lockfile); err == nil {
+		return fmt.Errorf("can't load store from %q - it's locked", s.dir)
+	}
+
+	s.log.Printf("creating lock file: %q", lockfile)
+	pid := fmt.Sprintf("%d", os.Getpid())
+	if err := ioutil.WriteFile(lockfile, []byte(pid), 0700); err != nil {
+		return fmt.Errorf("can't create lockfile %q: %v", lockfile, err)
+	}
 
 	if _, err := os.Stat(datafile); os.IsNotExist(err) {
-		// store does not exist, exiting
-		return
+		// store does not exist, nothing to load, and
+		// no reason to create, it'll get created on exit
+		return nil
 	}
 
 	content, err := ioutil.ReadFile(datafile)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if err := json.Unmarshal(content, s); err != nil {
-		log.Fatalf("ERROR: can't unmarshal datafile %q: %v", datafile, err)
+		return fmt.Errorf("can't unmarshal datafile %q: %v", datafile, err)
 	}
 
 	s.log.Printf("loaded %q datafile", datafile)
+	return nil
 }
 
 // unload saves the in-memory store to it's datafile
@@ -172,6 +189,11 @@ func (s *store) unload() error {
 	}
 
 	datafile := s.datafile()
+	lockfile := s.lockfile()
 	s.log.Printf("unloading %q datafile", datafile)
-	return ioutil.WriteFile(datafile, b, 0700)
+	if err := ioutil.WriteFile(datafile, b, 0700); err != nil {
+		return err
+	}
+
+	return os.Remove(lockfile)
 }

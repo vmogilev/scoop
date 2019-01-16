@@ -58,7 +58,10 @@ func New(port int, timeout time.Duration, dir string, verbose bool) *CMD {
 		messages:  make(chan message),
 		log:       log,
 	}
-	store.load()
+
+	if err := store.load(); err != nil {
+		log.Fatalf("ERROR: %v", err)
+	}
 
 	c := &CMD{
 		Port:    port,
