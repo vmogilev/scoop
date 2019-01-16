@@ -9,12 +9,6 @@ import (
 
 // listenAndServe with a graceful shutdown
 func (c *CMD) listenAndServe() {
-	c.Log.Printf("Starting Scoop Server on localhost:%d", c.Port)
-	var err error
-	if c.ln, err = net.Listen("tcp", c.hostname()); err != nil {
-		c.Log.Fatal(err)
-	}
-
 	var wg sync.WaitGroup
 loop:
 	for {
