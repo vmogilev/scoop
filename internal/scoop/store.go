@@ -33,6 +33,12 @@ type store struct {
 
 const (
 	storeName = "scoop.json"
+
+	// errors
+	errorCodeInvalidCMD = "ERR-0001"
+	errorCodeDepMissing = "ERR-0002"
+	errorCodeActiveDeps = "ERR-0003"
+	errorCodeInvalidPKG = "ERR-0004"
 )
 
 // handle passes the input commands to the store worker
@@ -55,29 +61,30 @@ func (s *store) handle(input string) (string, error) {
 //
 // worker is left behind on shutdown (by design)
 func (s *store) worker() {
+	var resp response
 	for m := range s.messages {
 		switch m.CMD {
 		case INDEX:
-			s.index(m)
+			resp = s.index(m)
 		case REMOVE:
-			s.remove(m)
+			resp = s.remove(m)
 		case QUERY:
-			s.query(m)
+			resp = s.query(m)
 		case NOOP:
-			m.retChan <- response{OK, nil}
+			resp = response{OK, nil}
 		default:
-			err := fmt.Errorf("message command %q is invalid", m.CMD)
-			m.retChan <- response{ERROR, err}
+			err := fmt.Errorf("%s: message command %q is invalid", errorCodeInvalidCMD, m.CMD)
+			resp = response{ERROR, err}
 		}
+		m.retChan <- resp
 	}
 }
 
-func (s *store) index(msg message) {
+func (s *store) index(msg message) response {
 	for _, name := range msg.DEP {
 		if _, found := s.PKGS[name]; !found {
-			err := fmt.Errorf("%q's dependency %q is missing", msg.PKG, name)
-			msg.retChan <- response{FAIL, err}
-			return
+			err := fmt.Errorf("%s: %q's dependency %q is missing", errorCodeDepMissing, msg.PKG, name)
+			return response{FAIL, err}
 		}
 	}
 
@@ -91,20 +98,18 @@ func (s *store) index(msg message) {
 		}
 	}
 
-	msg.retChan <- response{OK, nil}
+	return response{OK, nil}
 }
 
-func (s *store) remove(msg message) {
+func (s *store) remove(msg message) response {
 	dependsOn, found := s.PKGS[msg.PKG]
 	if !found {
-		msg.retChan <- response{OK, nil}
-		return
+		return response{OK, nil}
 	}
 
 	if deps, found := s.DEPS[msg.PKG]; found {
-		err := fmt.Errorf("%q has active dependencies %v", msg.PKG, deps)
-		msg.retChan <- response{FAIL, err}
-		return
+		err := fmt.Errorf("%s: %q has active dependencies %v", errorCodeActiveDeps, msg.PKG, deps)
+		return response{FAIL, err}
 	}
 
 	for _, name := range dependsOn {
@@ -119,15 +124,15 @@ func (s *store) remove(msg message) {
 
 	delete(s.PKGS, msg.PKG)
 
-	msg.retChan <- response{OK, nil}
+	return response{OK, nil}
 }
 
-func (s *store) query(msg message) {
+func (s *store) query(msg message) response {
 	if _, found := s.PKGS[msg.PKG]; found {
-		msg.retChan <- response{OK, nil}
-	} else {
-		msg.retChan <- response{FAIL, nil}
+		return response{OK, nil}
 	}
+	err := fmt.Errorf("%s: %q isn't indexed", errorCodeInvalidPKG, msg.PKG)
+	return response{FAIL, err}
 }
 
 func (s *store) datafile() string {
