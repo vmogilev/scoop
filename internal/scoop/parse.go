@@ -17,7 +17,12 @@ type response struct {
 	err  error
 }
 
-func parse(m []string) (message, error) {
+const (
+	sep = "|"
+)
+
+func parse(input string) (message, error) {
+	m := strings.Split(input, sep)
 	if len(m) != 3 {
 		return message{}, fmt.Errorf("message format is invalid: expecting 3 got %d tokens", len(m))
 	}

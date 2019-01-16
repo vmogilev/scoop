@@ -2,7 +2,6 @@ package scoop
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -23,7 +22,7 @@ func TestParser(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			out, err := parse(strings.Split(tc.in, sep))
+			out, err := parse(tc.in)
 			if tc.err && err == nil {
 				t.Fatalf("\nwant error got none")
 			}

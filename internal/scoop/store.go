@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -33,13 +32,12 @@ type store struct {
 }
 
 const (
-	sep       = "|"
 	storeName = "scoop.json"
 )
 
 // handle passes the input commands to the store worker
 func (s *store) handle(input string) (string, error) {
-	message, err := parse(strings.Split(input, sep))
+	message, err := parse(input)
 	if err != nil {
 		return ERROR, err
 	}
