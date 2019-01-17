@@ -47,4 +47,45 @@ Scoop's design follows Idiomatic `Go` concurrentcy pattern.  There are three bac
 
 **Server** implements graceful shutdown by listening to `syscall.SIGTERM` and `os.Interrupt`.  On shutdown, the server caches the shared data structure to disk and then reads it during startup.  It also implements a lock to ensure no two instances operate on the same cached data store concurrently.
 
+## Deployment / Testing
+
+Testing and builds are automated by `make`:
+
+```
+mve@mybox scoop (master) $ make
+build/darwin                   Build for darwin (save to OUTPUT_DIR/BIN)
+build/linux                    Build for linux (save to OUTPUT_DIR/BIN)
+build/release                  Prepare a build
+clean                          Remove all build artifacts
+clean/darwin                   Remove darwin build artifacts
+clean/linux                    Remove linux build artifacts
+docker/build                   Build Docker Container
+docker/run                     Run Docker Container
+help                           Display this help message
+test/integration               Intergration Testing
+```
+
+To build binaries for `linux` and `darwin` with `SEMVER=1.0`, execute:
+
+```
+## runs all tests automatically
+SEMVER=1.0 make build/release
+
+## validate SEMVER
+build/scoop-1.0-darwin/scoop --version
+```
+
+To only run tests, execute:
+
+```
+make test/integration
+```
+
+To build and then run a docker container:
+
+```
+SEMVER=1.0 make docker/build
+SEMVER=1.0 make docker/run
+```
+
 End.
