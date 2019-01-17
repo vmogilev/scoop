@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -17,24 +18,25 @@ type testCase struct {
 	out  string
 }
 
+// note: `-id`s are replaced during batch() tests with client IDs
 var testCases = []testCase{
-	{"MISSING", "QUERY|zmqpp|", FAIL},
-	{"ONE", "INDEX|zmqpp|", OK},
-	{"NO-DEPS", "INDEX|evas-generic-loaders|aalib,atk,audiofile", FAIL},
-	{"TWO", "INDEX|aalib|", OK},
-	{"THREE", "INDEX|atk|", OK},
-	{"FOUR", "INDEX|audiofile|", OK},
-	{"FIVE", "INDEX|audiofile2|", OK},
-	{"DEPS", "INDEX|evas-generic-loaders|aalib,atk,audiofile", OK},
-	{"SIX", "INDEX|evas-generic-loaders2|aalib,atk,audiofile", OK},
-	{"RM-ONE", "REMOVE|zmqpp|", OK},
-	{"RM-ONE-2X", "REMOVE|zmqpp|", OK},
-	{"RM-FOUR-DEP", "REMOVE|audiofile|", FAIL},
-	{"RM-FIVE", "REMOVE|evas-generic-loaders|", OK},
-	{"RM-SIX", "REMOVE|evas-generic-loaders2|", OK},
-	{"RM-FOUR", "REMOVE|audiofile|", OK},
-	{"QUERY-FOUR", "QUERY|audiofile|", FAIL},
-	{"QUERY-TWO", "QUERY|aalib|", OK},
+	{"MISSING", "QUERY|zmqpp-id|", FAIL},
+	{"ONE", "INDEX|zmqpp-id|", OK},
+	{"NO-DEPS", "INDEX|evas-generic-loaders-id|aalib-id,atk-id,audiofile-id", FAIL},
+	{"TWO", "INDEX|aalib-id|", OK},
+	{"THREE", "INDEX|atk-id|", OK},
+	{"FOUR", "INDEX|audiofile-id|", OK},
+	{"FIVE", "INDEX|audiofile2-id|", OK},
+	{"DEPS", "INDEX|evas-generic-loaders-id|aalib-id,atk-id,audiofile-id", OK},
+	{"SIX", "INDEX|evas-generic-loaders2-id|aalib-id,atk-id,audiofile-id", OK},
+	{"RM-ONE", "REMOVE|zmqpp-id|", OK},
+	{"RM-ONE-2X", "REMOVE|zmqpp-id|", OK},
+	{"RM-FOUR-DEP", "REMOVE|audiofile-id|", FAIL},
+	{"RM-FIVE", "REMOVE|evas-generic-loaders-id|", OK},
+	{"RM-SIX", "REMOVE|evas-generic-loaders2-id|", OK},
+	{"RM-FOUR", "REMOVE|audiofile-id|", OK},
+	{"QUERY-FOUR", "QUERY|audiofile-id|", FAIL},
+	{"QUERY-TWO", "QUERY|aalib-id|", OK},
 }
 
 func TestServer(t *testing.T) {
@@ -44,15 +46,24 @@ func TestServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// first test booting without cache
 	srv := New(port, timeoutSecs, tmp, true)
 	go srv.Start()
 	time.Sleep(time.Millisecond * 100)
+	close(srv.kill)
+	<-srv.closed
 
+	// next with cache (it's created by ^^^)
+	srv = New(port, timeoutSecs, tmp, true)
+	go srv.Start()
+	time.Sleep(time.Millisecond * 100)
 	defer func() {
 		close(srv.kill)
 		<-srv.closed
 	}()
 
+	// setup concurrent clients we can call later
 	var clients []*client
 	for {
 		if len(clients) > 10 {
@@ -71,11 +82,36 @@ func TestServer(t *testing.T) {
 		}
 	}()
 
+	// serial test
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := randClient(clients)
 			if out, err := c.send(tc.in); err != nil || out != tc.out {
 				t.Errorf("\nwant: %q got: %q (err=%v)", tc.out, out, err)
+			}
+		})
+	}
+
+	// batch pq test
+	var wg sync.WaitGroup
+	for id, c := range clients {
+		wg.Add(1)
+		go func(c *client, id int) {
+			c.batch(t, id)
+			wg.Done()
+		}(c, id)
+	}
+	wg.Wait()
+}
+
+func (c *client) batch(t *testing.T, id int) {
+	suffix := fmt.Sprintf("-%d", id)
+	for _, tc := range testCases {
+		name := tc.name + suffix
+		t.Run(name, func(t *testing.T) {
+			in := strings.Replace(tc.in, "-id", suffix, -1)
+			if out, err := c.send(in); err != nil || out != tc.out {
+				t.Errorf("\nwant: %q got: %q (in=%q / err=%v)", tc.out, out, in, err)
 			}
 		})
 	}

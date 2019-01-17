@@ -12,3 +12,6 @@
 *.out
 ticker.txt
 scoop-data
+
+# Build artifacts
+build
