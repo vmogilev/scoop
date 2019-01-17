@@ -86,7 +86,7 @@ func New(port int, timeout time.Duration, dir string, verbose bool) *CMD {
 // Start - starts scoop server and waits for stop/interrupt signal
 // and does a graceful shutdown if it's received
 func (c *CMD) Start() {
-	c.Log.Printf("Starting Scoop Server on localhost:%d", c.Port)
+	c.Log.Printf("Starting Scoop Server on %s", c.hostname())
 	var err error
 	if c.ln, err = net.Listen("tcp", c.hostname()); err != nil {
 		c.Log.Fatal(err)
