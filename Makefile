@@ -44,7 +44,7 @@ docker/build: ## Build Docker Container
 	docker build --build-arg SEMVER --build-arg RELEASE_VER -t $(BIN):$(SEMVER) .
 
 docker/run: ## Run Docker Container
-	docker run -p 8080:8080/tcp $(BIN):$(SEMVER)
+	docker run -p 8080:8080/tcp -v /tmp/scoop-data:/scoop-data $(BIN):$(SEMVER)
 
 help: ## Display this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_\/-]+:.*?## / {printf "\033[34m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | \
