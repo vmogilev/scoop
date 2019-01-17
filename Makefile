@@ -40,6 +40,12 @@ test/integration: ## Intergration Testing
 	go test -tags integration -timeout 30s -count=1 -v
 	go test ./... -timeout 30s -count=1 -v
 
+docker/build: ## Build Docker Container
+	docker build --build-arg SEMVER --build-arg RELEASE_VER -t $(BIN):$(SEMVER) .
+
+docker/run: ## Run Docker Container
+	docker run -p 8080:8080/tcp $(BIN):$(SEMVER)
+
 help: ## Display this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_\/-]+:.*?## / {printf "\033[34m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | \
 		sort | \

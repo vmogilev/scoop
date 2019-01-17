@@ -46,7 +46,7 @@ loop:
 }
 
 func (c *CMD) hostname() string {
-	return fmt.Sprintf("localhost:%d", c.Port)
+	return fmt.Sprintf("0.0.0.0:%d", c.Port)
 }
 
 func (c *CMD) shutdown() {
