@@ -43,7 +43,7 @@ Scoop's design follows Idiomatic `Go` concurrentcy pattern.  There are three bac
 
 **Listener** is accepting client connections, parses client commands to messages and sends them (concurently) to the Worker via a channel.  
 
-**Worker** is constantly pooling this channel and serializes access to a shared data structure.  Responses from the worker are sent back to the clients over a another channel embedded in the message itself.
+**Worker** is constantly pooling this channel and serializes access to a shared data structure.  Responses from the worker are sent back to the clients over another channel embedded in the message itself.
 
 **Server** implements graceful shutdown by listening to `syscall.SIGTERM` and `os.Interrupt`.  On shutdown, the server caches the shared data structure to disk and then reads it during startup.  It also implements a lock to ensure no two instances operate on the same cached data store concurrently.
 
