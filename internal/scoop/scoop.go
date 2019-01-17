@@ -15,8 +15,10 @@ type CMD struct {
 	Log     *log.Logger
 	ln      net.Listener
 	timeout time.Duration
+	kill    chan os.Signal
 	stop    chan (bool)
 	done    chan (bool)
+	closed  chan (bool)
 	verbose bool
 	store   *store
 }
@@ -58,13 +60,22 @@ func New(port int, timeout time.Duration, dir string, verbose bool) *CMD {
 		messages:  make(chan message),
 		log:       log,
 	}
-	store.load()
+
+	if err := store.load(); err != nil {
+		log.Fatalf("ERROR: %v", err)
+	}
+
+	// subscribe to SIGINT signals
+	kill := make(chan os.Signal)
+	signal.Notify(kill, syscall.SIGTERM, os.Interrupt)
 
 	c := &CMD{
 		Port:    port,
 		Log:     log,
+		kill:    kill,
 		stop:    make(chan bool),
 		done:    make(chan bool),
+		closed:  make(chan bool),
 		timeout: timeout,
 		verbose: verbose,
 		store:   store,
@@ -75,13 +86,15 @@ func New(port int, timeout time.Duration, dir string, verbose bool) *CMD {
 // Start - starts scoop server and waits for stop/interrupt signal
 // and does a graceful shutdown if it's received
 func (c *CMD) Start() {
-	// subscribe to SIGINT signals
-	shutdown := make(chan os.Signal)
-	signal.Notify(shutdown, syscall.SIGTERM, os.Interrupt)
+	c.Log.Printf("Starting Scoop Server on localhost:%d", c.Port)
+	var err error
+	if c.ln, err = net.Listen("tcp", c.hostname()); err != nil {
+		c.Log.Fatal(err)
+	}
 
 	go c.listenAndServe()
 	go c.store.worker()
 
-	<-shutdown // wait for SIGINT
+	<-c.kill // wait for SIGINT
 	c.shutdown()
 }
