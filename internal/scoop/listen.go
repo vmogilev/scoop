@@ -73,6 +73,10 @@ func (c *CMD) shutdown() {
 	if err := c.store.unload(); err != nil {
 		c.Log.Println(err)
 	}
+
+	// finally indicate that we are finally closed for business
+	// in case anyone cares to be waiting for it ...
+	close(c.closed)
 }
 
 func (c *CMD) sendNOOP() error {

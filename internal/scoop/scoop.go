@@ -15,8 +15,10 @@ type CMD struct {
 	Log     *log.Logger
 	ln      net.Listener
 	timeout time.Duration
+	kill    chan os.Signal
 	stop    chan (bool)
 	done    chan (bool)
+	closed  chan (bool)
 	verbose bool
 	store   *store
 }
@@ -63,11 +65,17 @@ func New(port int, timeout time.Duration, dir string, verbose bool) *CMD {
 		log.Fatalf("ERROR: %v", err)
 	}
 
+	// subscribe to SIGINT signals
+	kill := make(chan os.Signal)
+	signal.Notify(kill, syscall.SIGTERM, os.Interrupt)
+
 	c := &CMD{
 		Port:    port,
 		Log:     log,
+		kill:    kill,
 		stop:    make(chan bool),
 		done:    make(chan bool),
+		closed:  make(chan bool),
 		timeout: timeout,
 		verbose: verbose,
 		store:   store,
@@ -84,13 +92,9 @@ func (c *CMD) Start() {
 		c.Log.Fatal(err)
 	}
 
-	// subscribe to SIGINT signals
-	shutdown := make(chan os.Signal)
-	signal.Notify(shutdown, syscall.SIGTERM, os.Interrupt)
-
 	go c.listenAndServe()
 	go c.store.worker()
 
-	<-shutdown // wait for SIGINT
+	<-c.kill // wait for SIGINT
 	c.shutdown()
 }
