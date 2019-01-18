@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"sync"
-	"time"
 )
 
 // listenAndServe with a graceful shutdown
@@ -27,18 +26,7 @@ loop:
 
 			wg.Add(1)
 			go func() {
-				addr := conn.RemoteAddr().String()
-
-				if err := conn.SetDeadline(time.Now().Add(c.timeout)); err != nil {
-					c.Log.Printf("ERROR: setting timeout for %q: %v", addr, err)
-				} else {
-					c.serve(conn, addr)
-				}
-
-				if err := conn.Close(); err != nil {
-					c.Log.Printf("ERROR: closing %q: %v", addr, err)
-				}
-
+				c.serve(conn)
 				wg.Done()
 			}()
 		}

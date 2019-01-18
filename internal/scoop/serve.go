@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"net"
 	"strings"
+	"time"
 )
 
 // serve - clients can send/receive multiple messages through the same
@@ -16,15 +18,27 @@ import (
 // if the client is active, this happens instantly, but if the client
 // is idle, serveWrk() will block on r.ReadString() until conn.SetDeadline
 // is exceeded -- see listenAndServe() for how it's set ...
-func (c *CMD) serve(client io.ReadWriter, addr string) {
-	r := bufio.NewReader(client)
-	w := bufio.NewWriter(client)
+func (c *CMD) serve(conn net.Conn) {
+	r := bufio.NewReader(conn)
+	w := bufio.NewWriter(conn)
+	addr := conn.RemoteAddr().String()
+
+	defer func() {
+		if err := conn.Close(); err != nil {
+			c.Log.Printf("ERROR: closing %q: %v", addr, err)
+		}
+	}()
+
 	for {
 		select {
 		case <-c.stop:
 			c.Log.Printf("%s dropping client connection", addr)
 			return
 		default:
+			if err := conn.SetDeadline(time.Now().Add(c.timeout)); err != nil {
+				c.Log.Printf("ERROR: setting timeout for %q: %v", addr, err)
+				return
+			}
 			if err := c.serveWrk(r, w, addr); err != nil {
 				c.Log.Println(err)
 				return
