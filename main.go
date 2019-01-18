@@ -15,7 +15,7 @@ var (
 
 func main() {
 	port := flag.Int("port", 8080, "The port to listen on")
-	timeout := flag.Int64("timeout", 60, "Idle Connection Timeout in Seconds")
+	timeout := flag.Int64("timeout", 120, "Idle Connection Timeout in Seconds")
 	dir := flag.String("dir", "./scoop-data", "Location of scoop's data directory")
 	verbose := flag.Bool("verbose", false, "Set this to `true` for verbose output")
 	version := flag.Bool("version", false, "Set this to `true` to get current version")
